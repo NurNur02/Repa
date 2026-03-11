@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тестирование - Студент</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        body {
+            background: #f0f2f5;
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            width: 100%;
+            background: white;
+            border-radius: 24px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            overflow: hidden;
+            padding: 30px;
+        }
+        h1, h2 {
+            color: #1e293b;
+            margin-top: 0;
+        }
+        .theory-block {
+            background: #f8fafc;
+            padding: 25px;
+            border-radius: 20px;
+            border-left: 6px solid #2563eb;
+            margin-bottom: 25px;
+            line-height: 1.6;
+        }
+        button {
+            background: #2563eb;
+            color: white;
+            border: none;
+            padding: 14px 28px;
+            font-size: 1rem;
+            font-weight: 600;
+            border-radius: 60px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        button:hover {
+            background: #1d4ed8;
+        }
+        button:disabled {
+            background: #cbd5e1;
+            cursor: not-allowed;
+        }
+        .question-item {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 2px solid #e2e8f0;
+        }
+        .question-item.correct {
+            border-color: #22c55e;
+            background: #f0fdf4;
+        }
+        .question-item.incorrect {
+            border-color: #ef4444;
+            background: #fef2f2;
+        }
+        .options {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin: 15px 0;
+        }
+        .option {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 15px;
+            background: #f1f5f9;
+            border-radius: 40px;
+            cursor: pointer;
+            border: 2px solid transparent;
+        }
+        .option.selected {
+            border-color: #2563eb;
+            background: #dbeafe;
+        }
+        .explanation {
+            background: #f1f5f9;
+            padding: 15px 20px;
+            border-radius: 40px;
+            margin-top: 15px;
+            font-size: 0.95rem;
+        }
+        .pair-item {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: center;
+            margin: 15px 0;
+        }
+        .pair-left {
+            font-weight: 600;
+            min-width: 150px;
+        }
+        .pair-right select {
+            padding: 10px 20px;
+            border-radius: 40px;
+            border: 2px solid #cbd5e1;
+            background: white;
+            font-size: 1rem;
+            min-width: 180px;
+        }
+        .results-chart {
+            background: #1e293b;
+            color: white;
+            padding: 30px;
+            border-radius: 40px;
+            text-align: center;
+            margin: 30px 0;
+        }
+        .score {
+            font-size: 4rem;
+            font-weight: 700;
+            line-height: 1;
+        }
+        .student-id {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f1f5f9;
+            border-radius: 40px;
+        }
+        .student-id input {
+            padding: 10px 15px;
+            border-radius: 40px;
+            border: 2px solid #cbd5e1;
+            width: 200px;
+            margin-right: 10px;
+        }
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #64748b;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📚 Система тестирования</h1>
+        
+        <!-- Ввод ID студента -->
+        <div class="student-id">
+            <input type="text" id="studentId" placeholder="Введите ваш ID (например, 123)" value="123">
+            <button id="setStudentBtn">Продолжить</button>
+        </div>
+
+        <!-- Шаг 1: Теория -->
+        <div id="theoryStep" style="display: none;">
+            <h2>📖 Лекция: Основы тестирования</h2>
+            <div class="theory-block" id="theoryText">
+                Загрузка теории...
+            </div>
+            <button id="startTestBtn">▶ Начать тест</button>
+        </div>
+
+        <!-- Шаг 2: Тест -->
+        <div id="testStep" style="display: none;">
+            <h2>✍️ Тестирование</h2>
+            <div id="questionsList"></div>
+            <button id="finishTestBtn" style="display: none;">✅ Завершить тест</button>
+        </div>
+
+        <!-- Шаг 3: Результат -->
+        <div id="resultStep" style="display: none;">
+            <div class="results-chart">
+                <div style="font-size: 1.4rem;">Ваш результат</div>
+                <div class="score" id="scorePercent">0%</div>
+                <div id="scoreDetails">0 из 5</div>
+            </div>
+            <p style="color: #ef4444;">⛔ Тест можно пройти только один раз</p>
+        </div>
+
+        <!-- Загрузка -->
+        <div id="loading" class="loading">
+            ⏳ Загрузка...
+        </div>
+    </div>
+
+    <script>
+        // Конфигурация API
+        const firebaseConfig = {
+  apiKey: "AIzaSyD8zzNliFbyYfRIPdUKxwOKKgs-CtSldOo",
+  authDomain: "moon-baaa3.firebaseapp.com",
+  projectId: "moon-baaa3",
+  storageBucket: "moon-baaa3.firebasestorage.app",
+  messagingSenderId: "342563471974",
+  appId: "1:342563471974:web:93cc854cc91547223563a7"
+};
+
+        let studentId = null;
+        let currentTest = null;
+        let userAnswers = [];
+        let testStarted = false;
+        let testCompleted = false;
+        let startTime = null;
+
+        // Элементы DOM
+        const theoryStep = document.getElementById('theoryStep');
+        const testStep = document.getElementById('testStep');
+        const resultStep = document.getElementById('resultStep');
+        const loading = document.getElementById('loading');
+        const theoryText = document.getElementById('theoryText');
+        const questionsList = document.getElementById('questionsList');
+        const startBtn = document.getElementById('startTestBtn');
+        const finishBtn = document.getElementById('finishTestBtn');
+        const studentIdInput = document.getElementById('studentId');
+        const setStudentBtn = document.getElementById('setStudentBtn');
+        const scorePercent = document.getElementById('scorePercent');
+        const scoreDetails = document.getElementById('scoreDetails');
+
+        // Установка ID студента
+        setStudentBtn.addEventListener('click', async () => {
+            studentId = studentIdInput.value.trim();
+            if (!studentId) {
+                alert('Введите ID студента');
+                return;
+            }
+            
+            loading.style.display = 'block';
+            theoryStep.style.display = 'none';
+            
+            try {
+                // Проверяем, проходил ли уже тест
+                const response = await fetch(`${API_URL}/get_attempts.php?student_id=${studentId}`);
+                const attempts = await response.json();
+                
+                const lastAttempt = attempts[0];
+                if (lastAttempt && lastAttempt.completed) {
+                    // Уже проходил тест
+                    showResult(lastAttempt.score, lastAttempt.total);
+                } else {
+                    // Загружаем теорию и тест
+                    await loadTest();
+                    theoryStep.style.display = 'block';
+                }
+            } catch (error) {
+                console.error('Ошибка:', error);
+                // Если API не работает, используем демо-режим
+                useDemoMode();
+            }
+            
+            loading.style.display = 'none';
+        });
+
+        // Демо-режим (если API недоступен)
+        function useDemoMode() {
+            theoryText.innerHTML = `<p><strong>Тема:</strong> Принципы создания эффективных тестов.</p>
+                <p>🔹 Важно внимательно читать вопрос.<br>
+                   🔹 После выбора ответа сразу увидите, верен ли он (подсветка).<br>
+                   🔹 Задание на соответствие: соедините понятия.<br>
+                   🔹 В конце — процент правильных ответов.</p>`;
+            
+            currentTest = {
+                questions: [
+                    {
+                        type: 'choice',
+                        question: '1. Что такое HTML?',
+                        options: ['Язык программирования', 'Язык разметки', 'Стиль', 'Скрипт'],
+                        correct: 1,
+                        explanation: 'HTML — язык разметки гипертекста.'
+                    },
+                    {
+                        type: 'choice',
+                        question: '2. Какой тег для заголовка?',
+                        options: ['&lt;h1&gt;', '&lt;h6&gt;', '&lt;head&gt;', '&lt;header&gt;'],
+                        correct: 0,
+                        explanation: '&lt;h1&gt; — самый важный заголовок.'
+                    },
+                    {
+                        type: 'choice',
+                        question: '3. CSS используется для...',
+                        options: ['логики', 'стилей', 'базы данных', 'сервера'],
+                        correct: 1,
+                        explanation: 'CSS отвечает за внешний вид.'
+                    },
+                    {
+                        type: 'choice',
+                        question: '4. Какой язык выполняется в браузере?',
+                        options: ['Python', 'Java', 'JavaScript', 'C++'],
+                        correct: 2,
+                        explanation: 'JavaScript — язык веб-клиента.'
+                    },
+                    {
+                        type: 'pair',
+                        question: '5. Соедините термин и определение:',
+                        pairs: [
+                            { left: 'HTTP', right: 'Протокол передачи' },
+                            { left: 'FTP', right: 'Файловый протокол' }
+                        ],
+                        correctMap: { 0: 0, 1: 1 },
+                        explanation: 'HTTP — веб, FTP — файлы.'
+                    }
+                ]
+            };
+            
+            theoryStep.style.display = 'block';
+        }
+
+        // Загрузка теста с сервера
+        async function loadTest() {
+            const response = await fetch(`${API_URL}/get_test.php`);
+            currentTest = await response.json();
+            theoryText.innerHTML = currentTest.theory || 'Теория загружена';
+        }
+
+        // Начало теста
+        startBtn.addEventListener('click', () => {
+            testStarted = true;
+            startTime = new Date();
+            theoryStep.style.display = 'none';
+            testStep.style.display = 'block';
+            userAnswers = new Array(currentTest.questions.length);
+            renderTest();
+        });
+
+        // Отрисовка теста
+        function renderTest() {
+            let html = '';
+            currentTest.questions.forEach((q, idx) => {
+                let questionClass = 'question-item';
+                let explanationHtml = '';
+
+                if (userAnswers[idx] !== undefined) {
+                    let isCorrect = checkAnswer(idx, userAnswers[idx]);
+                    questionClass += isCorrect ? ' correct' : ' incorrect';
+                    explanationHtml = `<div class="explanation">💡 ${q.explanation}</div>`;
+                }
+
+                html += `<div class="${questionClass}" data-qidx="${idx}">`;
+                html += `<p><strong>${q.question}</strong></p>`;
+
+                if (q.type === 'choice') {
+                    html += '<div class="options">';
+                    q.options.forEach((opt, optIdx) => {
+                        let selectedClass = (userAnswers[idx] === optIdx) ? 'selected' : '';
+                        html += `<div class="option ${selectedClass}" data-q="${idx}" data-opt="${optIdx}">${opt}</div>`;
+                    });
+                    html += '</div>';
+                } else {
+                    html += '<div class="pair-container">';
+                    q.pairs.forEach((pair, pairIdx) => {
+                        const rightOptions = q.pairs.map(p => p.right);
+                        const selectedVal = (userAnswers[idx] && userAnswers[idx][pairIdx]) || '';
+                        html += `<div class="pair-item">
+                            <span class="pair-left">${pair.left}</span>
+                            <span class="pair-right">
+                                <select data-pair-q="${idx}" data-left-idx="${pairIdx}">
+                                    <option value="">— выберите —</option>`;
+                        rightOptions.forEach((rightText, optIdx) => {
+                            html += `<option value="${optIdx}" ${selectedVal === optIdx ? 'selected' : ''}>${rightText}</option>`;
+                        });
+                        html += `</select>
+                            </span>
+                        </div>`;
+                    });
+                    html += '</div>';
+                }
+
+                html += explanationHtml;
+                html += '</div>';
+            });
+            
+            questionsList.innerHTML = html;
+
+            // Проверяем, все ли вопросы отвечены
+            const allAnswered = userAnswers.every(a => a !== undefined);
+            finishBtn.style.display = allAnswered ? 'inline-block' : 'none';
+        }
+
+        // Проверка ответа
+        function checkAnswer(qIdx, answer) {
+            const q = currentTest.questions[qIdx];
+            if (q.type === 'choice') {
+                return answer === q.correct;
+            } else {
+                return answer && answer[0] === q.correctMap[0] && answer[1] === q.correctMap[1];
+            }
+        }
+
+        // Подсчет правильных ответов
+        function countCorrect() {
+            let correct = 0;
+            currentTest.questions.forEach((q, idx) => {
+                if (userAnswers[idx] !== undefined && checkAnswer(idx, userAnswers[idx])) {
+                    correct++;
+                }
+            });
+            return correct;
+        }
+
+        // Обработчики событий
+        questionsList.addEventListener('click', (e) => {
+            if (testCompleted) return;
+            
+            const optionDiv = e.target.closest('.option');
+            if (optionDiv) {
+                const qIdx = parseInt(optionDiv.dataset.q);
+                const optIdx = parseInt(optionDiv.dataset.opt);
+                userAnswers[qIdx] = optIdx;
+                renderTest();
+            }
+        });
+
+        questionsList.addEventListener('change', (e) => {
+            if (testCompleted || e.target.tagName !== 'SELECT') return;
+            
+            const qIdx = parseInt(e.target.dataset.pairQ);
+            const leftIdx = parseInt(e.target.dataset.leftIdx);
+            const val = e.target.value;
+            
+            if (!userAnswers[qIdx]) userAnswers[qIdx] = {};
+            userAnswers[qIdx][leftIdx] = val === '' ? null : parseInt(val);
+            renderTest();
+        });
+
+        // Завершение теста
+        finishBtn.addEventListener('click', async () => {
+            testCompleted = true;
+            const correctCount = countCorrect();
+            const percent = Math.round((correctCount / currentTest.questions.length) * 100);
+            
+            // Сохраняем результат на сервер
+            if (studentId) {
+                try {
+                    await fetch(`${API_URL}/save_attempt.php`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            student_id: studentId,
+                            start_time: startTime,
+                            end_time: new Date(),
+                            score: correctCount,
+                            total: currentTest.questions.length,
+                            answers: userAnswers
+                        })
+                    });
+                } catch (error) {
+                    console.error('Ошибка сохранения:', error);
+                }
+            }
+            
+            showResult(correctCount, currentTest.questions.length);
+        });
+
+        function showResult(correct, total) {
+            const percent = Math.round((correct / total) * 100);
+            scorePercent.textContent = percent + '%';
+            scoreDetails.textContent = `${correct} из ${total}`;
+            
+            testStep.style.display = 'none';
+            resultStep.style.display = 'block';
+        }
+    </script>
+</body>
+</html>
